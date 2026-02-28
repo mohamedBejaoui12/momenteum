@@ -1,0 +1,225 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
+@import "tailwindcss";
+
+/* ─── Manual dark mode variant ───────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ─── Design tokens (Notion/Minimalist Aesthetic) ─────── */
+@theme {
+  /* Surface */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f9f9f9;
+
+  /* Shadows (Crisp, grayscale, slightly harder edges) */
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-sidebar: 1px 0 0 rgba(0,0,0,0.05);
+
+  /* Animations */
+  --animate-fade-slide-in: fadeSlideIn 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float-in: floatIn 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-pulse-slow: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-subtle: bounceSubtle 2s infinite;
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes floatIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes pulseSlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  @keyframes bounceSubtle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+}
+
+/* ─── Base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #ffffff;
+  color: #111827; /* Tailwind gray-900 */
+  min-height: 100vh;
+}
+
+/* ─── Utility classes ────────────────────────────────── */
+.animate-fade-slide-in { animation: var(--animate-fade-slide-in); }
+.animate-float-in      { animation: var(--animate-float-in); }
+
+/* Card */
+.card {
+  background: #ffffff;
+  border-radius: 0.75rem; /* slightly tighter radius for a cleaner look */
+  border: 1px solid #e5e7eb; /* tailwind gray-200 */
+  box-shadow: var(--shadow-card);
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.card:hover { 
+  box-shadow: var(--shadow-card-hover); 
+  transform: translateY(-2px);
+}
+
+/* Pill button primary */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 1rem;
+  border-radius: 0.5rem; /* Notion uses squarer buttons, not pills */
+  background: #111827; /* solid black/gray-900 */
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 500; /* slightly less bold, more elegant */
+  border: 1px solid #111827;
+  cursor: pointer;
+  transition: opacity 150ms ease, transform 150ms ease, background 150ms ease;
+}
+.btn-primary:hover  { background: #374151; /* gray-700 */ border-color: #374151; }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:focus-visible {
+  outline: 2px solid #52525b; /* zinc-500 */
+  outline-offset: 2px;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Pill button ghost */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 1rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #374151; /* gray-700 */
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #e5e7eb; /* gray-200 */
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+.btn-ghost:hover  { background: #f3f4f6; /* gray-100 */ color: #111827; }
+.btn-ghost:focus-visible {
+  outline: 2px solid #9ca3af;
+  outline-offset: 2px;
+}
+
+/* Input */
+.input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db; /* gray-300 */
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.875rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  outline: none;
+}
+.input-field::placeholder { color: #9ca3af; /* gray-400 */ }
+.input-field:focus {
+  border-color: #4b5563; /* gray-600 */
+  box-shadow: 0 0 0 1px #4b5563; /* crisp 1px ring */
+}
+
+/* Badge / pill chip */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent; /* default */
+}
+/* Monochrome badges */
+.badge-purple { background: #f3f4f6; border-color: #e5e7eb; color: #374151; } /* Fallback mapped to gray */
+.badge-green  { background: #ecfdf5; border-color: #d1fae5; color: #065f46; }
+.badge-orange { background: #fff7ed; border-color: #ffedd5; color: #9a3412; }
+.badge-red    { background: #fef2f2; border-color: #fee2e2; color: #991b1b; }
+.badge-blue   { background: #eff6ff; border-color: #dbeafe; color: #1e40af; }
+.badge-gray   { background: #f4f4f5; border-color: #e4e4e7; color: #52525b; }
+
+/* Progress bar */
+.progress-bar-track {
+  height: 4px; /* thinner */
+  border-radius: 2px;
+  background: #e5e7eb; /* gray-200 */
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: #111827; /* solid black/dark gray */
+  transition: width 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.progress-bar-fill.green { background: #10b981; }
+
+/* Section title */
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280; /* gray-500 */
+}
+
+/* ─── Dark Mode Overrides ────────────────────────────── */
+.dark body {
+  background: #111827; /* gray-900 */
+  color: #f9fafb; /* gray-50 */
+}
+.dark .card {
+  background: #1f2937; /* gray-800 */
+  border-color: #374151; /* gray-700 */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.dark .card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.4);
+}
+.dark .btn-primary {
+  background: #f9fafb; /* inverted text */
+  color: #111827;
+  border-color: #f9fafb;
+}
+.dark .btn-primary:hover {
+  background: #e5e7eb;
+}
+.dark .btn-ghost {
+  border-color: #4b5563; /* gray-600 */
+  color: #d1d5db; /* gray-300 */
+}
+.dark .btn-ghost:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+.dark .input-field {
+  background: #1f2937; /* gray-800 */
+  border-color: #4b5563; /* gray-600 */
+  color: #f9fafb;
+}
+.dark .input-field::placeholder { color: #6b7280; }
+.dark .input-field:focus {
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 1px #9ca3af;
+}
+.dark .badge-purple, .dark .badge-gray {
+  background: #374151; border-color: #4b5563; color: #e5e7eb;
+}
+.dark .progress-bar-track { background: #374151; }
+.dark .progress-bar-fill { background: #f9fafb; }
+.dark .progress-bar-fill.green { background: #34d399; }
+.dark .section-title { color: #9ca3af; }
