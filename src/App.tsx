@@ -15,6 +15,7 @@ import { AnalyticsDashboard } from "./pages/AnalyticsDashboard";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ToastContainer, ReminderScheduler } from "./components/ReminderToast";
 import { ThemeProvider } from "./components/ThemeProvider";
+import LandingLayout from "./components/landing/LandingLayout";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <ToastContainer>
           <ReminderScheduler />
           <Routes>
+            <Route path="/landing" element={<LandingLayout />} />
             <Route path="/login"  element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route
@@ -43,7 +45,7 @@ export default function App() {
               <Route path="/profile"    element={<ProfilePage />} />
               <Route path="/settings"   element={<SettingsPage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/today" replace />} />
+            <Route path="*" element={<Navigate to="/landing" replace />} />
           </Routes>
         </ToastContainer>
       </AuthProvider>

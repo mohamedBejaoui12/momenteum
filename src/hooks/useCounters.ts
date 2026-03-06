@@ -41,6 +41,29 @@ export function useCreateCounter() {
   });
 }
 
+export function useUpdateCounter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: Pick<
+        Counter,
+        "id" | "name" | "icon" | "target_type" | "target_value"
+      >,
+    ) => {
+      const { id, ...updates } = input;
+      const { data, error } = await supabase
+        .from("counters")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as Counter;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["counters"] }),
+  });
+}
+
 export function useArchiveCounter() {
   const qc = useQueryClient();
   return useMutation({

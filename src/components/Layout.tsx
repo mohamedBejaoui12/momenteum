@@ -80,7 +80,7 @@ export function Layout() {
   const NavContent = ({ onClose }: { onClose?: () => void }) => (
     <>
       <div className="flex items-center gap-2 px-3 mb-6 mt-2">
-        <img src="/assets/logo.png" alt="Momentum Logo" className="h-32 w-auto object-contain dark:invert" />
+        <img src="/landing/logo.png" alt="Momentum Logo" className="h-32 w-auto object-contain dark:invert" />
       </div>
       {nav.map(({ to, label, icon }) => (
         <NavItem key={to} to={to} label={label} icon={icon} onClick={onClose} />
@@ -108,7 +108,7 @@ export function Layout() {
       {/* Mobile top bar */}
       <header className="relative z-30 md:hidden flex items-center justify-between px-4 py-3 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2">
-          <img src="/assets/logo.png" alt="Momentum Logo" className="h-20 w-auto object-contain dark:invert" />
+          <img src="/landing/logo.png" alt="Momentum Logo" className="h-20 w-auto object-contain dark:invert" />
         </div>
         <button
           onClick={() => setDrawerOpen(true)}

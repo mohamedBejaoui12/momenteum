@@ -98,9 +98,16 @@ export function useCreateTask() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      const { data: countData } = await supabase
+        .from("tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("task_date", task_date);
+      
+      const nextOrder = countData ? countData.length : 0;
+
       const { data, error } = await supabase
         .from("tasks")
-        .insert({ title, task_date, user_id: user!.id })
+        .insert({ title, task_date, user_id: user!.id, sort_order: nextOrder })
         .select()
         .single();
       if (error) throw error;
@@ -108,6 +115,52 @@ export function useCreateTask() {
     },
     onSuccess: (task) =>
       qc.invalidateQueries({ queryKey: ["tasks", task.task_date] }),
+  });
+}
+
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      title,
+      task_date,
+    }: Pick<Task, "id" | "title" | "task_date">) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ title })
+        .eq("id", id);
+      if (error) throw error;
+      return { id, title, task_date };
+    },
+    onSuccess: (vars) =>
+      qc.invalidateQueries({ queryKey: ["tasks", vars.task_date] }),
+  });
+}
+
+export function useReorderTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      tasks,
+      task_date: _task_date,
+    }: {
+      tasks: Task[];
+      task_date: string;
+    }) => {
+      const promises = tasks.map((t, i) => 
+        supabase
+          .from("tasks")
+          .update({ sort_order: i })
+          .eq("id", t.id)
+      );
+
+      const results = await Promise.all(promises);
+      const error = results.find(r => r.error)?.error;
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) =>
+      qc.invalidateQueries({ queryKey: ["tasks", vars.task_date] }),
   });
 }
 
@@ -135,10 +188,10 @@ export function useToggleTask() {
 export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, task_date }: Pick<Task, "id" | "task_date">) => {
+    mutationFn: async ({ id, task_date: _task_date }: Pick<Task, "id" | "task_date">) => {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
       if (error) throw error;
-      return task_date;
+      return _task_date;
     },
     onSuccess: (_data, vars) =>
       qc.invalidateQueries({ queryKey: ["tasks", vars.task_date] }),

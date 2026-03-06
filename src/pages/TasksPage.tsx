@@ -1,15 +1,88 @@
-import { useState } from "react";
-import { useTasks } from "../hooks/useTasks";
+import { useState, useEffect } from "react";
+import { useTasks, useReorderTasks } from "../hooks/useTasks";
 import { TaskItem } from "../components/TaskItem";
 import { QuickAddTask } from "../components/QuickAddTask";
 import { todayISO, formatDate } from "../lib/dateUtils";
 import { CheckCircle2, ListTodo } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import type { Task } from "../lib/types";
 
 export function TasksPage() {
   const [date, setDate] = useState(todayISO());
-  const { data: tasks = [], isLoading } = useTasks(date);
+  const { data: serverTasks = [], isLoading } = useTasks(date);
+  const reorder = useReorderTasks();
+
+  // Local state for optimistic reordering
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    if (serverTasks.length > 0) {
+      setTasks(serverTasks);
+    } else if (!isLoading) {
+      setTasks([]);
+    }
+  }, [serverTasks, isLoading]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const done = tasks.filter((t) => t.completed).length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      const newIndex = tasks.findIndex((t) => t.id === over.id);
+
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      setTasks(newTasks);
+      reorder.mutate({ tasks: newTasks, task_date: date });
+    }
+  };
+
+  const moveTask = (id: string, direction: "up" | "down") => {
+    const index = tasks.findIndex((t) => t.id === id);
+    if (index === -1) return;
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === tasks.length - 1) return;
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    const newTasks = arrayMove(tasks, index, newIndex);
+    setTasks(newTasks);
+    reorder.mutate({ tasks: newTasks, task_date: date });
+  };
 
   return (
     <div className="space-y-6 animate-float-in max-w-2xl">
@@ -57,7 +130,7 @@ export function TasksPage() {
 
       {/* Task list */}
       <div className="card p-4 flex flex-col gap-1 shadow-sm border-zinc-200 dark:border-zinc-800">
-        {isLoading ? (
+        {isLoading && serverTasks.length === 0 ? (
           <div className="flex flex-col gap-3 py-4">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-10 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 animate-pulse" />
@@ -70,7 +143,27 @@ export function TasksPage() {
             <p className="text-xs mt-1">Add one below to get started</p>
           </div>
         ) : (
-          tasks.map((t) => <TaskItem key={t.id} task={t} />)
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+              <div className="flex flex-col gap-1">
+                {tasks.map((t, i) => (
+                  <TaskItem 
+                    key={t.id} 
+                    task={t} 
+                    onMoveUp={() => moveTask(t.id, "up")}
+                    onMoveDown={() => moveTask(t.id, "down")}
+                    isFirst={i === 0}
+                    isLast={i === tasks.length - 1}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
         <div className="mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
           <QuickAddTask date={date} />

@@ -1,6 +1,6 @@
 import { useCounters } from "../hooks/useCounters";
 import { useCounterEntries } from "../hooks/useCounterEntries";
-import { useTasks } from "../hooks/useTasks";
+import { useTasks, useReorderTasks } from "../hooks/useTasks";
 import { useTodayReminders } from "../hooks/useReminders";
 import { useAuthStore } from "../stores/authStore";
 import { useProfile } from "../hooks/useProfile";
@@ -8,11 +8,28 @@ import { CounterCard } from "../components/CounterCard";
 import { TaskItem } from "../components/TaskItem";
 import { QuickAddTask } from "../components/QuickAddTask";
 import { todayISO } from "../lib/dateUtils";
-import type { Counter } from "../lib/types";
-import { useState } from "react";
+import type { Counter, Task } from "../lib/types";
+import { useState, useEffect } from "react";
 import { AddCounterModal } from "../components/AddCounterModal";
 import { AddReminderModal } from "../components/AddReminderModal";
 import { PlusCircle, BellPlus, CheckCircle2, BellRing } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 function TodayCounterCard({ counter }: { counter: Counter }) {
   const { data: entries = [] } = useCounterEntries(counter.id, 30);
@@ -24,13 +41,67 @@ export function TodayDashboard() {
   const { data: profile } = useProfile();
   const today = todayISO();
   const { data: counters = [] } = useCounters();
-  const { data: tasks = [] } = useTasks(today);
+  const { data: serverTasks = [] } = useTasks(today);
+  const reorder = useReorderTasks();
   const { data: reminders = [] } = useTodayReminders();
   const [showCounterModal, setShowCounterModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  
+  // Local state for optimistic reordering
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    if (serverTasks.length > 0) {
+      setTasks(serverTasks);
+    } else {
+      setTasks([]);
+    }
+  }, [serverTasks]);
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const done = tasks.filter((t) => t.completed).length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = tasks.findIndex((t) => t.id === active.id);
+      const newIndex = tasks.findIndex((t) => t.id === over.id);
+
+      const newTasks = arrayMove(tasks, oldIndex, newIndex);
+      setTasks(newTasks);
+      reorder.mutate({ tasks: newTasks, task_date: today });
+    }
+  };
+
+  const moveTask = (id: string, direction: "up" | "down") => {
+    const index = tasks.findIndex((t) => t.id === id);
+    if (index === -1) return;
+    if (direction === "up" && index === 0) return;
+    if (direction === "down" && index === tasks.length - 1) return;
+
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    const newTasks = arrayMove(tasks, index, newIndex);
+    setTasks(newTasks);
+    reorder.mutate({ tasks: newTasks, task_date: today });
+  };
 
   const greet = () => {
     const h = new Date().getHours();
@@ -118,7 +189,27 @@ export function TodayDashboard() {
           {tasks.length === 0 ? (
             <p className="text-sm text-zinc-400 dark:text-zinc-500 text-center py-6 font-medium">No tasks yet — add one below!</p>
           ) : (
-            tasks.map((t) => <TaskItem key={t.id} task={t} />)
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+              modifiers={[restrictToVerticalAxis]}
+            >
+              <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col gap-1">
+                  {tasks.map((t, i) => (
+                    <TaskItem 
+                      key={t.id} 
+                      task={t} 
+                      onMoveUp={() => moveTask(t.id, "up")}
+                      onMoveDown={() => moveTask(t.id, "down")}
+                      isFirst={i === 0}
+                      isLast={i === tasks.length - 1}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
           <div className="mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
             <QuickAddTask date={today} />
